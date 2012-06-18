@@ -2,6 +2,7 @@
 import sys
 import os
 import shutil
+import time
 
 if len(sys.argv) < 3 or sys.argv[1] not in ["up", "out"]:
     sys.stderr.write("Usage: \n")
@@ -12,8 +13,10 @@ if len(sys.argv) < 3 or sys.argv[1] not in ["up", "out"]:
 mode = sys.argv[1]
 
 homedir = "/home/%s" % sys.argv[2]
-dot_repo = "git/dotfiles"
-vim_repo = "git/vimconfig"
+gitdir = "%s/git" % homedir
+backupdir = "%s/.dotroll_backup" % homedir
+dot_repo = "dotfiles"
+vim_repo = "vimconfig"
 dotfiles = (
     ".bashrc",
     ".bash_profile",
@@ -25,31 +28,53 @@ vimfiles = (
 )
 
 def build_source_destination(f, repo, roll_mode=mode, 
-        source_base=homedir, dest_base=homedir):
+        source_base=homedir, dest_base=gitdir):
     source = "%s/%s" % (source_base, f)
     destination = "%s/%s/%s" % (dest_base, repo, f)
 
-    if mode == 'out':
+    if roll_mode == 'out':
         source, destination = destination, source
 
     return source, destination
 
+def perform_copy(source, destination):
+    print "Copying '%s' to '%s'..." % (source, destination)
+    if os.path.isdir(source):
+        if os.path.exists(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
+    else:
+        shutil.copy(source, destination)
+
+def backup_files(files, repo):
+    tmpdir = "/tmp/dotroll"
+
+    if os.path.exists(tmpdir):
+        shutil.rmtree(tmpdir)
+    os.makedirs(tmpdir)
+
+    for dfile in files:
+        if dfile == '':
+            next
+        source, destination = build_source_destination(dfile, repo, "up",
+                homedir, tmpdir)
+        final_dir = "%s/%s" % (tmpdir, dfile)
+        perform_copy(source, final_dir)
+
+    backup_file = "%s/%s.%s" % (backupdir, repo, str(int(time.mktime(time.localtime()))))
+    print "Creating backup %s" % backup_file
+    shutil.make_archive(backup_file, "gztar", tmpdir)
+
 def copy_files(files, repo):
     for dfile in files:
+        if dfile == '':
+            next
         source, destination = build_source_destination(dfile, repo)
+        perform_copy(source, destination)
 
-        try:
-            print "Copying '%s' to '%s'..." % (source, destination)
-            shutil.copy(source, destination)
-        except IOError as e:
-            if e.args[1] == "Is a directory":
-                print "...'%s' is a directory.  Replacing '%s'..." % (source, destination)
-                if os.path.exists(destination):
-                    shutil.rmtree(destination)
-                shutil.copytree(source, destination)
-            else:
-                raise e
-            
+if mode == "out":
+    backup_files(dotfiles, dot_repo)
+    backup_files(vimfiles, vim_repo)
 
 copy_files(dotfiles, dot_repo)
 copy_files(vimfiles, vim_repo)
