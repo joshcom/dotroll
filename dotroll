@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 import shutil
 
 if len(sys.argv) < 3 or sys.argv[1] not in ["up", "out"]:
@@ -11,19 +12,44 @@ if len(sys.argv) < 3 or sys.argv[1] not in ["up", "out"]:
 mode = sys.argv[1]
 
 homedir = "/home/%s" % sys.argv[2]
-git_repo = "git/dotfiles"
+dot_repo = "git/dotfiles"
+vim_repo = "git/vimconfig"
 dotfiles = (
     ".bashrc",
     ".bash_profile",
     ".gitconfig"
 )
+vimfiles = (
+    ".vim",
+    ".vimrc"
+)
 
-for dfile in dotfiles:
-    source = "%s/%s" % (homedir, dfile)
-    destination = "%s/%s/%s" % (homedir, git_repo, dfile)
+def build_source_destination(f, repo, roll_mode=mode, 
+        source_base=homedir, dest_base=homedir):
+    source = "%s/%s" % (source_base, f)
+    destination = "%s/%s/%s" % (dest_base, repo, f)
 
     if mode == 'out':
         source, destination = destination, source
 
-    print "Copying '%s' to '%s'..." % (source, destination)
-    shutil.copy(source, destination)
+    return source, destination
+
+def copy_files(files, repo):
+    for dfile in files:
+        source, destination = build_source_destination(dfile, repo)
+
+        try:
+            print "Copying '%s' to '%s'..." % (source, destination)
+            shutil.copy(source, destination)
+        except IOError as e:
+            if e.args[1] == "Is a directory":
+                print "...'%s' is a directory.  Replacing '%s'..." % (source, destination)
+                if os.path.exists(destination):
+                    shutil.rmtree(destination)
+                shutil.copytree(source, destination)
+            else:
+                raise e
+            
+
+copy_files(dotfiles, dot_repo)
+copy_files(vimfiles, vim_repo)
