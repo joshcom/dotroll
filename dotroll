@@ -20,7 +20,9 @@ vim_repo = "vimconfig"
 dotfiles = (
     ".bashrc",
     ".bash_profile",
-    ".gitconfig"
+    ".bash_colors",
+    ".gitconfig",
+    ".gitignore"
 )
 vimfiles = (
     ".vim",
