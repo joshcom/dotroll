@@ -22,7 +22,8 @@ dotfiles = (
     ".bash_profile",
     ".bash_colors",
     ".gitconfig",
-    ".gitignore"
+    ".gitignore",
+    ".tmux.conf"
 )
 vimfiles = (
     ".vim",
